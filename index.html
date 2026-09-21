@@ -279,8 +279,8 @@
 <div class="w-full md:flex-1">
 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Kelas</label>
 <div class="relative">
-<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="portalHostClassSearch" list="portalHostClassList" placeholder="Ketik / cari nama kelas…" inputmode="text" type="text">
-<datalist id="portalHostClassList"></datalist>
+<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="portalHostClassSearch" readonly onclick="window.openKaihPicker('class')" placeholder="Ketik / cari nama kelas…" inputmode="text" type="text">
+
 <select class="hidden" id="portalHostClass" aria-hidden="true"><option value="">-- Pilih Kelas --</option></select>
 </div>
 <p class="mt-1 text-[10px] text-slate-400">Di HP: ketuk kolom lalu ketik nama kelas untuk mencari lebih cepat.</p>
@@ -288,8 +288,8 @@
 <div class="w-full md:flex-1">
 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Nama Murid</label>
 <div class="relative">
-<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400" id="portalHostStudentSearch" list="portalHostStudentList" placeholder="Pilih kelas dahulu…" disabled inputmode="text" type="text">
-<datalist id="portalHostStudentList"></datalist>
+<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400" id="portalHostStudentSearch" readonly onclick="window.openKaihPicker('student')" placeholder="Pilih kelas dahulu…" disabled inputmode="text" type="text">
+
 <select class="hidden" id="portalHostStudent" aria-hidden="true" disabled><option value="">-- Pilih Kelas Dahulu --</option></select>
 </div>
 <p class="mt-1 text-[10px] text-slate-400">Nama murid dapat dicari dengan mengetik beberapa huruf.</p>
@@ -468,6 +468,21 @@
 </div>
 </div>
 </div>
+<div id="kaihMobilePicker" class="hidden fixed inset-0 z-[250] bg-black/40 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Pilihan Jurnal 7 KAIH">
+<div class="w-full max-w-lg mx-auto mt-4 sm:mt-10 bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+<div class="px-4 py-3 border-b flex items-center justify-between gap-3">
+<div>
+<div id="kaihPickerTitle" class="font-black text-slate-800">Pilih</div>
+<div id="kaihPickerHint" class="text-xs text-slate-500">Ketik untuk mencari</div>
+</div>
+<button type="button" onclick="window.closeKaihPicker()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-black text-xl" aria-label="Tutup">×</button>
+</div>
+<div class="p-3 border-b bg-slate-50">
+<input id="kaihPickerSearch" type="search" autocomplete="off" class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-white text-base font-semibold outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Cari…">
+</div>
+<div id="kaihPickerList" class="overflow-y-auto overscroll-contain p-2" style="-webkit-overflow-scrolling:touch"></div>
+</div>
+</div>
 <script>
     (function(){
       function txt(v){ return v == null ? '' : String(v).trim(); }
@@ -528,13 +543,7 @@
         if(input) input.value=txt(value);
         if(select) select.value=txt(value);
       }
-      function fillDatalist(listId, values){
-        var list=document.getElementById(listId); if(!list) return;
-        list.innerHTML='';
-        (values||[]).forEach(function(v){
-          var o=document.createElement('option'); o.value=txt(v); list.appendChild(o);
-        });
-      }
+      function fillDatalist(listId, values){ /* Picker Android memakai daftar modal, bukan datalist. */ }
       function getClassSearchValue(){
         var input=document.getElementById('portalHostClassSearch'), select=document.getElementById('portalHostClass');
         return txt((input&&input.value) || (select&&select.value));
@@ -543,6 +552,62 @@
         var input=document.getElementById('portalHostStudentSearch'), select=document.getElementById('portalHostStudent');
         return txt((input&&input.value) || (select&&select.value));
       }
+      var kaihPickerMode='';
+      var kaihPickerItems=[];
+      function openKaihPicker(mode){
+        var picker=document.getElementById('kaihMobilePicker'), search=document.getElementById('kaihPickerSearch'), list=document.getElementById('kaihPickerList');
+        if(!picker||!list) return;
+        kaihPickerMode=mode;
+        var cat=classList();
+        if(mode==='class') kaihPickerItems=cat.names.slice();
+        else {
+          var selected=getClassSearchValue(), seen={}, arr=[];
+          for(var i=0;i<cat.students.length;i++){
+            var n=studentName(cat.students[i]), sc=studentClass(cat.students[i]);
+            if(n && sc && key(sc)===key(selected) && !seen[key(n)]){seen[key(n)]=1;arr.push(n);}
+          }
+          arr.sort(function(a,b){return a.localeCompare(b,'id',{sensitivity:'base'});});
+          kaihPickerItems=arr;
+        }
+        document.getElementById('kaihPickerTitle').textContent=mode==='class'?'Pilih Kelas':'Pilih Nama Murid';
+        document.getElementById('kaihPickerHint').textContent=mode==='class'?'Pilih kelas dari daftar yang tersedia':'Daftar murid mengikuti kelas yang dipilih';
+        search.value='';
+        picker.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        renderKaihPicker('');
+        setTimeout(function(){search.focus();},80);
+      }
+      function renderKaihPicker(filter){
+        var list=document.getElementById('kaihPickerList'); if(!list) return;
+        var f=key(filter), html='';
+        for(var i=0;i<kaihPickerItems.length;i++){
+          var v=txt(kaihPickerItems[i]); if(f && key(v).indexOf(f)<0) continue;
+          html += '<button type="button" class="w-full text-left px-4 py-3 rounded-2xl mb-1 bg-white hover:bg-emerald-50 active:bg-emerald-100 border border-slate-100 font-semibold text-slate-700" data-kaih-choice="'+encodeURIComponent(v)+'">'+v.replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];})+'</button>';
+        }
+        if(!html) html='<div class="p-6 text-center text-sm text-slate-500">Tidak ada data yang cocok.</div>';
+        list.innerHTML=html;
+        var buttons=list.querySelectorAll('[data-kaih-choice]');
+        for(var j=0;j<buttons.length;j++) buttons[j].onclick=function(){chooseKaihPicker(decodeURIComponent(this.getAttribute('data-kaih-choice')));};
+      }
+      function chooseKaihPicker(value){
+        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
+        if(kaihPickerMode==='class'){
+          clsInput.value=value; cls.value=value;
+          if(stuInput){stuInput.value='';stuInput.disabled=false;stuInput.placeholder='Ketuk untuk memilih nama murid…';}
+          if(stu){stu.value='';stu.disabled=false;}
+          populateStudents();
+        } else {
+          stuInput.value=value; if(stu) stu.value=value;
+        }
+        closeKaihPicker();
+      }
+      function closeKaihPicker(){
+        var picker=document.getElementById('kaihMobilePicker'); if(picker) picker.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+      window.openKaihPicker=openKaihPicker;
+      window.closeKaihPicker=closeKaihPicker;
+
       function lockTeacherKaihClass(){
         var cls=document.getElementById('portalHostClass');
         var clsInput=document.getElementById('portalHostClassSearch');
@@ -768,15 +833,11 @@
           if(title) title.textContent=mode==='siswa'?'Pilih Kelas dan Nama Murid':'Pilih Kelas dan Nama Murid untuk menyetujui laporan';
           if(btn) btn.textContent=mode==='siswa'?'Buat Laporan':'Cek & Setujui Laporan';
           populateClasses();
-          if(clsInput) clsInput.oninput=function(){
-            var typed=txt(clsInput.value), list=classList().names, exact='';
-            for(var ci=0;ci<list.length;ci++){ if(key(list[ci])===key(typed)){ exact=list[ci]; break; } }
-            if(cls) cls.value=exact;
-            if(stuInput) stuInput.value='';
-            if(stu) stu.value='';
-            populateStudents();
-          };
-          if(stuInput) stuInput.oninput=function(){ if(stu) stu.value=txt(stuInput.value); };
+          if(clsInput) clsInput.oninput=null;
+          if(stuInput) stuInput.oninput=null;
+          var kaihPickerSearch=document.getElementById('kaihPickerSearch');
+          if(kaihPickerSearch) kaihPickerSearch.oninput=function(){ renderKaihPicker(this.value); };
+          if(kaihPickerSearch) kaihPickerSearch.onkeydown=function(e){ if(e.key==='Escape') closeKaihPicker(); };
           if(btn) btn.onclick=function(){
             var selected=txt((clsInput&&clsInput.value)||(cls&&cls.value)), student=txt((stuInput&&stuInput.value)||(stu&&stu.value)), cat=classList(), match=null, i;
             if(!selected){alert('Silakan pilih kelas terlebih dahulu.');return;}
@@ -833,8 +894,31 @@
             }
             launch(html);
           };
-          if(window.__JURNAL_SELECTOR_REFRESH_TIMER) clearInterval(window.__JURNAL_SELECTOR_REFRESH_TIMER);
-          window.__JURNAL_SELECTOR_REFRESH_TIMER=setInterval(populateClasses,1000);
+          // Jangan melakukan refresh selector dengan setInterval. Pada Android/HP,
+          // refresh setiap 1 detik membuat input/datalist dibangun ulang sehingga
+          // daftar kelas/nama murid muncul sebentar lalu hilang kembali.
+          // Selector sekarang hanya diisi saat halaman dibuka dan saat data benar-benar berubah.
+          if(window.__JURNAL_SELECTOR_REFRESH_TIMER){
+            clearInterval(window.__JURNAL_SELECTOR_REFRESH_TIMER);
+            window.__JURNAL_SELECTOR_REFRESH_TIMER=null;
+          }
+          window.__JURNAL_SELECTOR_LAST_CLASS_COUNT=classList().classes.length;
+          window.__JURNAL_SELECTOR_LAST_STUDENT_COUNT=classList().students.length;
+          window.__JURNAL_SELECTOR_REFRESH=function(){
+            var c=classList();
+            var classCount=c.classes.length, studentCount=c.students.length;
+            if(classCount!==window.__JURNAL_SELECTOR_LAST_CLASS_COUNT || studentCount!==window.__JURNAL_SELECTOR_LAST_STUDENT_COUNT){
+              var currentClass=txt((clsInput&&clsInput.value)||(cls&&cls.value));
+              var currentStudent=txt((stuInput&&stuInput.value)||(stu&&stu.value));
+              window.__JURNAL_SELECTOR_LAST_CLASS_COUNT=classCount;
+              window.__JURNAL_SELECTOR_LAST_STUDENT_COUNT=studentCount;
+              populateClasses();
+              if(currentClass && clsInput) clsInput.value=currentClass;
+              if(currentClass) populateStudents();
+              if(currentStudent && stuInput) stuInput.value=currentStudent;
+              if(currentStudent && stu) stu.value=currentStudent;
+            }
+          };
         }else{
           if(bar) bar.style.display='none';
           var html=window.__JURNAL_KAIH_HTML||'';
