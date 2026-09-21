@@ -278,15 +278,21 @@
 <div class="flex flex-col md:flex-row gap-3 items-end">
 <div class="w-full md:flex-1">
 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Kelas</label>
-<select class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="portalHostClass">
-<option value="">-- Pilih Kelas --</option>
-</select>
+<div class="relative">
+<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="portalHostClassSearch" list="portalHostClassList" placeholder="Ketik / cari nama kelas…" inputmode="text" type="text">
+<datalist id="portalHostClassList"></datalist>
+<select class="hidden" id="portalHostClass" aria-hidden="true"><option value="">-- Pilih Kelas --</option></select>
+</div>
+<p class="mt-1 text-[10px] text-slate-400">Di HP: ketuk kolom lalu ketik nama kelas untuk mencari lebih cepat.</p>
 </div>
 <div class="w-full md:flex-1">
 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Nama Murid</label>
-<select class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" disabled="" id="portalHostStudent">
-<option value="">-- Pilih Kelas Dahulu --</option>
-</select>
+<div class="relative">
+<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400" id="portalHostStudentSearch" list="portalHostStudentList" placeholder="Pilih kelas dahulu…" disabled inputmode="text" type="text">
+<datalist id="portalHostStudentList"></datalist>
+<select class="hidden" id="portalHostStudent" aria-hidden="true" disabled><option value="">-- Pilih Kelas Dahulu --</option></select>
+</div>
+<p class="mt-1 text-[10px] text-slate-400">Nama murid dapat dicari dengan mengetik beberapa huruf.</p>
 </div>
 <button class="w-full md:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow" id="portalHostOpen" type="button">
             Lanjut ke Jurnal
@@ -515,101 +521,107 @@
         var p=window.AppState||{};
         return txt(p.assignedClass||'');
       }
+      // Mobile-friendly selector: input + datalist. Native <select> dengan ratusan nama
+      // murid sulit dinavigasi di Android, sehingga pengguna dapat mengetik untuk mencari.
+      function syncPickerValue(inputId, selectId, value){
+        var input=document.getElementById(inputId), select=document.getElementById(selectId);
+        if(input) input.value=txt(value);
+        if(select) select.value=txt(value);
+      }
+      function fillDatalist(listId, values){
+        var list=document.getElementById(listId); if(!list) return;
+        list.innerHTML='';
+        (values||[]).forEach(function(v){
+          var o=document.createElement('option'); o.value=txt(v); list.appendChild(o);
+        });
+      }
+      function getClassSearchValue(){
+        var input=document.getElementById('portalHostClassSearch'), select=document.getElementById('portalHostClass');
+        return txt((input&&input.value) || (select&&select.value));
+      }
+      function getStudentSearchValue(){
+        var input=document.getElementById('portalHostStudentSearch'), select=document.getElementById('portalHostStudent');
+        return txt((input&&input.value) || (select&&select.value));
+      }
       function lockTeacherKaihClass(){
         var cls=document.getElementById('portalHostClass');
+        var clsInput=document.getElementById('portalHostClassSearch');
         var stu=document.getElementById('portalHostStudent');
+        var stuInput=document.getElementById('portalHostStudentSearch');
         var title=document.getElementById('portalSelectionTitle');
         if(!cls) return;
         var assigned=getAssignedClassForTeacher();
         if(!assigned) return;
         cls.innerHTML='';
-        var opt=document.createElement('option');
-        opt.value=assigned;
-        opt.textContent=assigned;
-        cls.appendChild(opt);
-        cls.value=assigned;
-        cls.disabled=true;
+        var opt=document.createElement('option'); opt.value=assigned; opt.textContent=assigned; cls.appendChild(opt);
+        cls.value=assigned; cls.disabled=true;
+        if(clsInput){ clsInput.value=assigned; clsInput.disabled=true; }
+        fillDatalist('portalHostClassList',[assigned]);
         if(title) title.textContent='Jurnal 7 KAIH — '+assigned;
-        if(stu){
-          stu.disabled=false;
-          stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>';
-        }
+        if(stu){ stu.disabled=false; stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>'; }
+        if(stuInput){ stuInput.disabled=false; stuInput.value=''; stuInput.placeholder='Ketik nama murid…'; }
       }
       function populateTeacherKaihStudents(){
-        var cls=document.getElementById('portalHostClass');
-        var stu=document.getElementById('portalHostStudent');
+        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), stuInput=document.getElementById('portalHostStudentSearch');
         if(!cls||!stu) return;
         var selected=getAssignedClassForTeacher();
         if(!selected) return;
-        var cat=classList(), matched=[], seen={}, i,s,n,sc,o;
-        stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>';
-        stu.disabled=false;
+        var cat=classList(), matched=[], seen={}, i,s,n,sc,o,names=[];
+        stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>'; stu.disabled=false;
+        if(stuInput){ stuInput.disabled=false; stuInput.value=''; stuInput.placeholder='Ketik nama murid…'; }
         for(i=0;i<cat.students.length;i++){
           s=cat.students[i]; n=studentName(s); sc=key(studentClass(s));
           if(n && sc && sc===key(selected)) matched.push(s);
         }
-        matched.sort(function(a,b){
-          return studentName(a).localeCompare(studentName(b),'id',{sensitivity:'base'});
-        });
+        matched.sort(function(a,b){ return studentName(a).localeCompare(studentName(b),'id',{sensitivity:'base'}); });
         for(i=0;i<matched.length;i++){
-          n=studentName(matched[i]); var k=key(n);
-          if(!n||seen[k]) continue;
-          seen[k]=1;
-          o=document.createElement('option');
-          o.value=n; o.textContent=n;
-          stu.appendChild(o);
+          n=studentName(matched[i]); var k=key(n); if(!n||seen[k]) continue; seen[k]=1; names.push(n);
+          o=document.createElement('option'); o.value=n; o.textContent=n; stu.appendChild(o);
         }
+        fillDatalist('portalHostStudentList',names);
       }
-
       function populateClasses(){
         var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent');
+        var clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
         if(!cls) return;
-        var old=txt(cls.value), list=classList().names, i,o;
+        var old=txt((clsInput&&clsInput.value)||cls.value), list=classList().names, i,o;
         cls.innerHTML='<option value="">-- Pilih Kelas --</option>';
         for(i=0;i<list.length;i++){ o=document.createElement('option'); o.value=list[i]; o.textContent=list[i]; cls.appendChild(o); }
-        if(old){ for(i=0;i<list.length;i++){ if(key(list[i])===key(old)){ cls.value=list[i]; break; } } }
+        fillDatalist('portalHostClassList',list);
+        if(old){ for(i=0;i<list.length;i++){ if(key(list[i])===key(old)){ cls.value=list[i]; if(clsInput) clsInput.value=list[i]; break; } } }
+        if(stuInput){ stuInput.value=''; stuInput.disabled=true; stuInput.placeholder='Pilih kelas dahulu…'; }
         populateStudents();
       }
       function populateStudents(){
-        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent');
+        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
         if(!cls||!stu) return;
-        var oldStudent=txt(stu.value);
-        var selected=txt(cls.value), cat=classList(), i,s,n,sc,o,matched=[],seen={};
+        var oldStudent=txt((stuInput&&stuInput.value)||stu.value);
+        var selected=txt((clsInput&&clsInput.value)||cls.value), cat=classList(), i,s,n,sc,o,matched=[],seen={},names=[];
         stu.innerHTML='<option value="">'+(selected?'-- Pilih Nama Murid --':'-- Pilih Kelas Dahulu --')+'</option>';
         stu.disabled=!selected;
-        if(!selected) return;
+        if(stuInput){ stuInput.disabled=!selected; if(!selected) stuInput.value=''; stuInput.placeholder=selected?'Ketik nama murid…':'Pilih kelas dahulu…'; }
+        if(!selected){ fillDatalist('portalHostStudentList',[]); return; }
         for(i=0;i<cat.students.length;i++){
           s=cat.students[i]; n=studentName(s); sc=key(studentClass(s));
           if(n && (!sc || sc===key(selected) || sc.indexOf(key(selected))>=0 || key(selected).indexOf(sc)>=0)) matched.push(s);
         }
-        if(!matched.length){
-          for(i=0;i<cat.students.length;i++){ s=cat.students[i]; if(studentName(s)) matched.push(s); }
-        }
+        if(!matched.length){ for(i=0;i<cat.students.length;i++){ s=cat.students[i]; if(studentName(s)) matched.push(s); } }
         matched.sort(function(a,b){return studentName(a).localeCompare(studentName(b),'id',{sensitivity:'base'});});
         for(i=0;i<matched.length;i++){
-          n=studentName(matched[i]); var k=key(n); if(!n||seen[k]) continue; seen[k]=1;
+          n=studentName(matched[i]); var k=key(n); if(!n||seen[k]) continue; seen[k]=1; names.push(n);
           o=document.createElement('option'); o.value=n; o.textContent=n; stu.appendChild(o);
         }
-        // Jangan menghapus nama yang sedang dipilih ketika katalog Firebase diperbarui.
+        fillDatalist('portalHostStudentList',names);
         if(oldStudent){
           var restored=false;
-          for(i=0;i<stu.options.length;i++){
-            if(key(stu.options[i].value)===key(oldStudent)){
-              stu.value=stu.options[i].value; restored=true; break;
-            }
-          }
-          if(!restored){
-            // Jika data murid sedang refresh, pertahankan pilihan sementara di dropdown.
-            o=document.createElement('option');
-            o.value=oldStudent; o.textContent=oldStudent;
-            stu.appendChild(o); stu.value=oldStudent;
-          }
+          for(i=0;i<stu.options.length;i++) if(key(stu.options[i].value)===key(oldStudent)){ stu.value=stu.options[i].value; if(stuInput) stuInput.value=stu.options[i].value; restored=true; break; }
+          if(!restored){ o=document.createElement('option'); o.value=oldStudent; o.textContent=oldStudent; stu.appendChild(o); stu.value=oldStudent; if(stuInput) stuInput.value=oldStudent; }
         }
       }
       function openPortal(role){
         var mode=role==='teacher'?'guru':(role==='student'?'siswa':(role==='parent'?'orangtua':'portal'));
         window.AppState=window.AppState||{}; window.AppState.characterLoginRole=role;
-        var login=document.getElementById('characterLoginPortal'), page=document.getElementById('directKaihPage'), bar=document.getElementById('portalSelectionBar'), frame=document.getElementById('directKaihFrame'), cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), btn=document.getElementById('portalHostOpen'), title=document.getElementById('portalSelectionTitle');
+        var login=document.getElementById('characterLoginPortal'), page=document.getElementById('directKaihPage'), bar=document.getElementById('portalSelectionBar'), frame=document.getElementById('directKaihFrame'), cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), btn=document.getElementById('portalHostOpen'), title=document.getElementById('portalSelectionTitle'), clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
 
         // Login Kepala Sekolah Jurnal 7 KAIH menggunakan Kode Kepala Sekolah
         // yang sama dengan akun pada Administrasi Pembelajaran. Tidak ada password kedua.
@@ -756,11 +768,28 @@
           if(title) title.textContent=mode==='siswa'?'Pilih Kelas dan Nama Murid':'Pilih Kelas dan Nama Murid untuk menyetujui laporan';
           if(btn) btn.textContent=mode==='siswa'?'Buat Laporan':'Cek & Setujui Laporan';
           populateClasses();
-          if(cls) cls.onchange=function(){ if(stu) stu.value=''; populateStudents(); };
+          if(clsInput) clsInput.oninput=function(){
+            var typed=txt(clsInput.value), list=classList().names, exact='';
+            for(var ci=0;ci<list.length;ci++){ if(key(list[ci])===key(typed)){ exact=list[ci]; break; } }
+            if(cls) cls.value=exact;
+            if(stuInput) stuInput.value='';
+            if(stu) stu.value='';
+            populateStudents();
+          };
+          if(stuInput) stuInput.oninput=function(){ if(stu) stu.value=txt(stuInput.value); };
           if(btn) btn.onclick=function(){
-            var selected=txt(cls&&cls.value), student=txt(stu&&stu.value), cat=classList(), match=null, i;
+            var selected=txt((clsInput&&clsInput.value)||(cls&&cls.value)), student=txt((stuInput&&stuInput.value)||(stu&&stu.value)), cat=classList(), match=null, i;
             if(!selected){alert('Silakan pilih kelas terlebih dahulu.');return;}
             if(!student){alert('Silakan pilih nama murid terlebih dahulu.');return;}
+            var validClass=false, validStudent=false;
+            for(i=0;i<cat.classes.length;i++){
+              if(key(className(cat.classes[i]))===key(selected)){ validClass=true; break; }
+            }
+            for(i=0;i<cat.students.length;i++){
+              if(key(studentName(cat.students[i]))===key(student) && (!studentClass(cat.students[i]) || key(studentClass(cat.students[i]))===key(selected))){ validStudent=true; break; }
+            }
+            if(!validClass){alert('Kelas belum dipilih dari daftar. Silakan ketik lalu pilih nama kelas yang muncul.');return;}
+            if(!validStudent){alert('Nama murid belum dipilih dari daftar untuk kelas tersebut. Silakan ketik beberapa huruf lalu pilih nama yang sesuai.');return;}
             for(i=0;i<cat.classes.length;i++){if(key(className(cat.classes[i]))===key(selected)){match=cat.classes[i];break;}}
             window.__JURNAL_SELECTED_CLASS=selected;
             window.__JURNAL_SELECTED_STUDENT=student;
@@ -9072,9 +9101,24 @@ const data = {
 
             const result = [];
             const add = v => {
-                const c = canonicalAssessmentSubject(v);
+                const rawValue = String(v || '').trim();
+                if (!rawValue) return;
+
+                const c = canonicalAssessmentSubject(rawValue);
                 const key = normalizeAssessmentSubject(c);
-                if (ASSESSMENT_MASTER_SUBJECTS.some(s => normalizeAssessmentSubject(s) === key) && !result.some(x => normalizeAssessmentSubject(x) === key)) result.push(c);
+
+                // Simpan mapel yang dikenali oleh master subject.
+                if (ASSESSMENT_MASTER_SUBJECTS.some(s => normalizeAssessmentSubject(s) === key)) {
+                    if (!result.some(x => normalizeAssessmentSubject(x) === key)) result.push(c);
+                    return;
+                }
+
+                // Data guru lama/custom subject tetap dipertahankan. Ini penting
+                // agar Kode Guru Mapel tidak dianggap invalid hanya karena nama
+                // mapelnya belum ada di daftar master.
+                if (!result.some(x => normalizeAssessmentSubject(x) === normalizeAssessmentSubject(rawValue))) {
+                    result.push(rawValue);
+                }
             };
             raw.forEach(add);
 
@@ -11602,11 +11646,13 @@ if (!isPasswordHidden) {
                     return;
                 }
 
+                // Guru Mapel harus dapat LOGIN hanya berdasarkan Kode Guru yang
+                // terdaftar. Data Mata Pelajaran dipakai untuk membatasi fitur
+                // Penilaian setelah login, bukan untuk menggagalkan autentikasi.
+                // Versi lama memblokir login jika nama mapel belum cocok persis
+                // dengan ASSESSMENT_MASTER_SUBJECTS.
                 const loginSubjects = getLoggedInTeacherSubjects(teacher);
-                if (loginSubjects.length === 0) {
-                    showToast('Akses Guru Mapel belum lengkap. Administrator harus mengisi Mata Pelajaran yang Diampu pada Data Guru.', 'error');
-                    return;
-                }
+                window.AppState.subjectTeacherSubjects = loginSubjects;
 
                 window.AppState.assignedClass = '';
                 window.AppState.currentTeacherName = teacher.name || '';
