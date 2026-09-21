@@ -3821,9 +3821,17 @@ if (globalSem && !globalSem.dataset.initialized) {
           } catch (e) {}
         };
 
+        // Sinkronkan sekali saat portal dibuka. JANGAN menggunakan setInterval
+        // di sini: pada Android, pembaruan state berulang dapat membuat komponen
+        // <select> dibangun ulang saat jari pengguna sedang membuka daftar,
+        // sehingga pilihan terlihat muncul-hilang-muncul.
         syncPortalCatalog();
-        const timer = setInterval(syncPortalCatalog, 500);
-        return () => clearInterval(timer);
+
+        // Jika halaman induk mengirim sinyal perubahan katalog, sinkronkan sekali.
+        // Tidak ada polling sehingga kontrol kelas/nama murid tetap stabil.
+        const handleKaihCatalogUpdate = () => syncPortalCatalog();
+        window.addEventListener('kaih-catalog-updated', handleKaihCatalogUpdate);
+        return () => window.removeEventListener('kaih-catalog-updated', handleKaihCatalogUpdate);
       }, []);
 
       useEffect(() => {
@@ -3864,8 +3872,11 @@ if (globalSem && !globalSem.dataset.initialized) {
         localStorage.setItem('last_class_id', classId);
 
         if (isOffline) {
+          // Mode offline cukup memuat data sekali. Polling berkala dapat
+          // membangun ulang state saat pengguna sedang memilih di Android.
           const load = () => setData(LocalDB.get(classId));
-          load(); const int = setInterval(load, 2000); return () => clearInterval(int);
+          load();
+          return undefined;
         }
 
         if (!firebaseReady) return;
