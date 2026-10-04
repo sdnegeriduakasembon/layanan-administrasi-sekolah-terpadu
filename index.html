@@ -278,21 +278,15 @@
 <div class="flex flex-col md:flex-row gap-3 items-end">
 <div class="w-full md:flex-1">
 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Kelas</label>
-<div class="relative">
-<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="portalHostClassSearch" readonly onclick="window.openKaihPicker('class')" placeholder="Ketik / cari nama kelas…" inputmode="text" type="text">
-
-<select class="hidden" id="portalHostClass" aria-hidden="true"><option value="">-- Pilih Kelas --</option></select>
-</div>
-<p class="mt-1 text-[10px] text-slate-400">Di HP: ketuk kolom lalu ketik nama kelas untuk mencari lebih cepat.</p>
+<select class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="portalHostClass">
+<option value="">-- Pilih Kelas --</option>
+</select>
 </div>
 <div class="w-full md:flex-1">
 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Nama Murid</label>
-<div class="relative">
-<input autocomplete="off" autocapitalize="words" class="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400" id="portalHostStudentSearch" readonly onclick="window.openKaihPicker('student')" placeholder="Pilih kelas dahulu…" disabled inputmode="text" type="text">
-
-<select class="hidden" id="portalHostStudent" aria-hidden="true" disabled><option value="">-- Pilih Kelas Dahulu --</option></select>
-</div>
-<p class="mt-1 text-[10px] text-slate-400">Nama murid dapat dicari dengan mengetik beberapa huruf.</p>
+<select class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500" disabled="" id="portalHostStudent">
+<option value="">-- Pilih Kelas Dahulu --</option>
+</select>
 </div>
 <button class="w-full md:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow" id="portalHostOpen" type="button">
             Lanjut ke Jurnal
@@ -468,21 +462,6 @@
 </div>
 </div>
 </div>
-<div id="kaihMobilePicker" class="hidden fixed inset-0 z-[250] bg-black/40 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Pilihan Jurnal 7 KAIH">
-<div class="w-full max-w-lg mx-auto mt-4 sm:mt-10 bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-<div class="px-4 py-3 border-b flex items-center justify-between gap-3">
-<div>
-<div id="kaihPickerTitle" class="font-black text-slate-800">Pilih</div>
-<div id="kaihPickerHint" class="text-xs text-slate-500">Ketik untuk mencari</div>
-</div>
-<button type="button" onclick="window.closeKaihPicker()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-black text-xl" aria-label="Tutup">×</button>
-</div>
-<div class="p-3 border-b bg-slate-50">
-<input id="kaihPickerSearch" type="search" autocomplete="off" class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-white text-base font-semibold outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Cari…">
-</div>
-<div id="kaihPickerList" class="overflow-y-auto overscroll-contain p-2" style="-webkit-overflow-scrolling:touch"></div>
-</div>
-</div>
 <script>
     (function(){
       function txt(v){ return v == null ? '' : String(v).trim(); }
@@ -536,157 +515,101 @@
         var p=window.AppState||{};
         return txt(p.assignedClass||'');
       }
-      // Mobile-friendly selector: input + datalist. Native <select> dengan ratusan nama
-      // murid sulit dinavigasi di Android, sehingga pengguna dapat mengetik untuk mencari.
-      function syncPickerValue(inputId, selectId, value){
-        var input=document.getElementById(inputId), select=document.getElementById(selectId);
-        if(input) input.value=txt(value);
-        if(select) select.value=txt(value);
-      }
-      function fillDatalist(listId, values){ /* Picker Android memakai daftar modal, bukan datalist. */ }
-      function getClassSearchValue(){
-        var input=document.getElementById('portalHostClassSearch'), select=document.getElementById('portalHostClass');
-        return txt((input&&input.value) || (select&&select.value));
-      }
-      function getStudentSearchValue(){
-        var input=document.getElementById('portalHostStudentSearch'), select=document.getElementById('portalHostStudent');
-        return txt((input&&input.value) || (select&&select.value));
-      }
-      var kaihPickerMode='';
-      var kaihPickerItems=[];
-      function openKaihPicker(mode){
-        var picker=document.getElementById('kaihMobilePicker'), search=document.getElementById('kaihPickerSearch'), list=document.getElementById('kaihPickerList');
-        if(!picker||!list) return;
-        kaihPickerMode=mode;
-        var cat=classList();
-        if(mode==='class') kaihPickerItems=cat.names.slice();
-        else {
-          var selected=getClassSearchValue(), seen={}, arr=[];
-          for(var i=0;i<cat.students.length;i++){
-            var n=studentName(cat.students[i]), sc=studentClass(cat.students[i]);
-            if(n && sc && key(sc)===key(selected) && !seen[key(n)]){seen[key(n)]=1;arr.push(n);}
-          }
-          arr.sort(function(a,b){return a.localeCompare(b,'id',{sensitivity:'base'});});
-          kaihPickerItems=arr;
-        }
-        document.getElementById('kaihPickerTitle').textContent=mode==='class'?'Pilih Kelas':'Pilih Nama Murid';
-        document.getElementById('kaihPickerHint').textContent=mode==='class'?'Pilih kelas dari daftar yang tersedia':'Daftar murid mengikuti kelas yang dipilih';
-        search.value='';
-        picker.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        renderKaihPicker('');
-        setTimeout(function(){search.focus();},80);
-      }
-      function renderKaihPicker(filter){
-        var list=document.getElementById('kaihPickerList'); if(!list) return;
-        var f=key(filter), html='';
-        for(var i=0;i<kaihPickerItems.length;i++){
-          var v=txt(kaihPickerItems[i]); if(f && key(v).indexOf(f)<0) continue;
-          html += '<button type="button" class="w-full text-left px-4 py-3 rounded-2xl mb-1 bg-white hover:bg-emerald-50 active:bg-emerald-100 border border-slate-100 font-semibold text-slate-700" data-kaih-choice="'+encodeURIComponent(v)+'">'+v.replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];})+'</button>';
-        }
-        if(!html) html='<div class="p-6 text-center text-sm text-slate-500">Tidak ada data yang cocok.</div>';
-        list.innerHTML=html;
-        var buttons=list.querySelectorAll('[data-kaih-choice]');
-        for(var j=0;j<buttons.length;j++) buttons[j].onclick=function(){chooseKaihPicker(decodeURIComponent(this.getAttribute('data-kaih-choice')));};
-      }
-      function chooseKaihPicker(value){
-        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
-        if(kaihPickerMode==='class'){
-          clsInput.value=value; cls.value=value;
-          if(stuInput){stuInput.value='';stuInput.disabled=false;stuInput.placeholder='Ketuk untuk memilih nama murid…';}
-          if(stu){stu.value='';stu.disabled=false;}
-          populateStudents();
-        } else {
-          stuInput.value=value; if(stu) stu.value=value;
-        }
-        closeKaihPicker();
-      }
-      function closeKaihPicker(){
-        var picker=document.getElementById('kaihMobilePicker'); if(picker) picker.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-      }
-      window.openKaihPicker=openKaihPicker;
-      window.closeKaihPicker=closeKaihPicker;
-
       function lockTeacherKaihClass(){
         var cls=document.getElementById('portalHostClass');
-        var clsInput=document.getElementById('portalHostClassSearch');
         var stu=document.getElementById('portalHostStudent');
-        var stuInput=document.getElementById('portalHostStudentSearch');
         var title=document.getElementById('portalSelectionTitle');
         if(!cls) return;
         var assigned=getAssignedClassForTeacher();
         if(!assigned) return;
         cls.innerHTML='';
-        var opt=document.createElement('option'); opt.value=assigned; opt.textContent=assigned; cls.appendChild(opt);
-        cls.value=assigned; cls.disabled=true;
-        if(clsInput){ clsInput.value=assigned; clsInput.disabled=true; }
-        fillDatalist('portalHostClassList',[assigned]);
+        var opt=document.createElement('option');
+        opt.value=assigned;
+        opt.textContent=assigned;
+        cls.appendChild(opt);
+        cls.value=assigned;
+        cls.disabled=true;
         if(title) title.textContent='Jurnal 7 KAIH — '+assigned;
-        if(stu){ stu.disabled=false; stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>'; }
-        if(stuInput){ stuInput.disabled=false; stuInput.value=''; stuInput.placeholder='Ketik nama murid…'; }
+        if(stu){
+          stu.disabled=false;
+          stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>';
+        }
       }
       function populateTeacherKaihStudents(){
-        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), stuInput=document.getElementById('portalHostStudentSearch');
+        var cls=document.getElementById('portalHostClass');
+        var stu=document.getElementById('portalHostStudent');
         if(!cls||!stu) return;
         var selected=getAssignedClassForTeacher();
         if(!selected) return;
-        var cat=classList(), matched=[], seen={}, i,s,n,sc,o,names=[];
-        stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>'; stu.disabled=false;
-        if(stuInput){ stuInput.disabled=false; stuInput.value=''; stuInput.placeholder='Ketik nama murid…'; }
+        var cat=classList(), matched=[], seen={}, i,s,n,sc,o;
+        stu.innerHTML='<option value="">-- Pilih Nama Murid --</option>';
+        stu.disabled=false;
         for(i=0;i<cat.students.length;i++){
           s=cat.students[i]; n=studentName(s); sc=key(studentClass(s));
           if(n && sc && sc===key(selected)) matched.push(s);
         }
-        matched.sort(function(a,b){ return studentName(a).localeCompare(studentName(b),'id',{sensitivity:'base'}); });
+        matched.sort(function(a,b){
+          return studentName(a).localeCompare(studentName(b),'id',{sensitivity:'base'});
+        });
         for(i=0;i<matched.length;i++){
-          n=studentName(matched[i]); var k=key(n); if(!n||seen[k]) continue; seen[k]=1; names.push(n);
-          o=document.createElement('option'); o.value=n; o.textContent=n; stu.appendChild(o);
+          n=studentName(matched[i]); var k=key(n);
+          if(!n||seen[k]) continue;
+          seen[k]=1;
+          o=document.createElement('option');
+          o.value=n; o.textContent=n;
+          stu.appendChild(o);
         }
-        fillDatalist('portalHostStudentList',names);
       }
+
       function populateClasses(){
         var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent');
-        var clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
         if(!cls) return;
-        var old=txt((clsInput&&clsInput.value)||cls.value), list=classList().names, i,o;
+        var old=txt(cls.value), list=classList().names, i,o;
         cls.innerHTML='<option value="">-- Pilih Kelas --</option>';
         for(i=0;i<list.length;i++){ o=document.createElement('option'); o.value=list[i]; o.textContent=list[i]; cls.appendChild(o); }
-        fillDatalist('portalHostClassList',list);
-        if(old){ for(i=0;i<list.length;i++){ if(key(list[i])===key(old)){ cls.value=list[i]; if(clsInput) clsInput.value=list[i]; break; } } }
-        if(stuInput){ stuInput.value=''; stuInput.disabled=true; stuInput.placeholder='Pilih kelas dahulu…'; }
+        if(old){ for(i=0;i<list.length;i++){ if(key(list[i])===key(old)){ cls.value=list[i]; break; } } }
         populateStudents();
       }
       function populateStudents(){
-        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
+        var cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent');
         if(!cls||!stu) return;
-        var oldStudent=txt((stuInput&&stuInput.value)||stu.value);
-        var selected=txt((clsInput&&clsInput.value)||cls.value), cat=classList(), i,s,n,sc,o,matched=[],seen={},names=[];
+        var oldStudent=txt(stu.value);
+        var selected=txt(cls.value), cat=classList(), i,s,n,sc,o,matched=[],seen={};
         stu.innerHTML='<option value="">'+(selected?'-- Pilih Nama Murid --':'-- Pilih Kelas Dahulu --')+'</option>';
         stu.disabled=!selected;
-        if(stuInput){ stuInput.disabled=!selected; if(!selected) stuInput.value=''; stuInput.placeholder=selected?'Ketik nama murid…':'Pilih kelas dahulu…'; }
-        if(!selected){ fillDatalist('portalHostStudentList',[]); return; }
+        if(!selected) return;
         for(i=0;i<cat.students.length;i++){
           s=cat.students[i]; n=studentName(s); sc=key(studentClass(s));
           if(n && (!sc || sc===key(selected) || sc.indexOf(key(selected))>=0 || key(selected).indexOf(sc)>=0)) matched.push(s);
         }
-        if(!matched.length){ for(i=0;i<cat.students.length;i++){ s=cat.students[i]; if(studentName(s)) matched.push(s); } }
+        if(!matched.length){
+          for(i=0;i<cat.students.length;i++){ s=cat.students[i]; if(studentName(s)) matched.push(s); }
+        }
         matched.sort(function(a,b){return studentName(a).localeCompare(studentName(b),'id',{sensitivity:'base'});});
         for(i=0;i<matched.length;i++){
-          n=studentName(matched[i]); var k=key(n); if(!n||seen[k]) continue; seen[k]=1; names.push(n);
+          n=studentName(matched[i]); var k=key(n); if(!n||seen[k]) continue; seen[k]=1;
           o=document.createElement('option'); o.value=n; o.textContent=n; stu.appendChild(o);
         }
-        fillDatalist('portalHostStudentList',names);
+        // Jangan menghapus nama yang sedang dipilih ketika katalog Firebase diperbarui.
         if(oldStudent){
           var restored=false;
-          for(i=0;i<stu.options.length;i++) if(key(stu.options[i].value)===key(oldStudent)){ stu.value=stu.options[i].value; if(stuInput) stuInput.value=stu.options[i].value; restored=true; break; }
-          if(!restored){ o=document.createElement('option'); o.value=oldStudent; o.textContent=oldStudent; stu.appendChild(o); stu.value=oldStudent; if(stuInput) stuInput.value=oldStudent; }
+          for(i=0;i<stu.options.length;i++){
+            if(key(stu.options[i].value)===key(oldStudent)){
+              stu.value=stu.options[i].value; restored=true; break;
+            }
+          }
+          if(!restored){
+            // Jika data murid sedang refresh, pertahankan pilihan sementara di dropdown.
+            o=document.createElement('option');
+            o.value=oldStudent; o.textContent=oldStudent;
+            stu.appendChild(o); stu.value=oldStudent;
+          }
         }
       }
       function openPortal(role){
         var mode=role==='teacher'?'guru':(role==='student'?'siswa':(role==='parent'?'orangtua':'portal'));
         window.AppState=window.AppState||{}; window.AppState.characterLoginRole=role;
-        var login=document.getElementById('characterLoginPortal'), page=document.getElementById('directKaihPage'), bar=document.getElementById('portalSelectionBar'), frame=document.getElementById('directKaihFrame'), cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), btn=document.getElementById('portalHostOpen'), title=document.getElementById('portalSelectionTitle'), clsInput=document.getElementById('portalHostClassSearch'), stuInput=document.getElementById('portalHostStudentSearch');
+        var login=document.getElementById('characterLoginPortal'), page=document.getElementById('directKaihPage'), bar=document.getElementById('portalSelectionBar'), frame=document.getElementById('directKaihFrame'), cls=document.getElementById('portalHostClass'), stu=document.getElementById('portalHostStudent'), btn=document.getElementById('portalHostOpen'), title=document.getElementById('portalSelectionTitle');
 
         // Login Kepala Sekolah Jurnal 7 KAIH menggunakan Kode Kepala Sekolah
         // yang sama dengan akun pada Administrasi Pembelajaran. Tidak ada password kedua.
@@ -700,7 +623,7 @@
             '<div class="text-center mb-6"><div class="w-14 h-14 mx-auto rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center mb-3"><i data-lucide="award" class="w-7 h-7"></i></div>'+
             '<h3 class="text-xl font-black text-slate-800">Login Kepala Sekolah — Jurnal 7 KAIH</h3>'+
             '<p class="text-sm text-slate-500 mt-1">Gunakan Kode Kepala Sekolah yang sama dengan Administrasi Pembelajaran.</p></div>'+
-            '<label class="block text-xs font-bold text-slate-600 mb-2">Kode Kepala Sekolah</label>'+ '<input id="kaihPrincipalCodeInput" type="text" autocomplete="off" class="w-full px-4 py-3 rounded-xl border border-slate-300 font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-violet-500" placeholder="Contoh: KS-001">'+
+            '<label class="block text-xs font-bold text-slate-600 mb-2">Kode Kepala Sekolah</label>'+ '<input id="kaihPrincipalCodeInput" type="password" autocomplete="off" class="w-full px-4 py-3 rounded-xl border border-slate-300 font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-violet-500" placeholder="Contoh: KS-001">'+
             '<div id="kaihPrincipalLoginError" class="hidden mt-3 text-sm font-semibold text-rose-600"></div>'+ '<div class="grid grid-cols-2 gap-3 mt-6"><button type="button" id="kaihPrincipalCancel" class="py-3 rounded-xl border border-slate-300 font-bold text-slate-600">Batal</button>'+ '<button type="button" id="kaihPrincipalSubmit" class="py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold">Masuk ke Jurnal</button></div></div>';
           document.body.appendChild(pmodal);
           if(window.lucide) window.lucide.createIcons();
@@ -752,7 +675,7 @@
             '<div class="text-center mb-6"><div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3"><i data-lucide="graduation-cap" class="w-7 h-7"></i></div>'+
             '<h3 class="text-xl font-black text-slate-800">Login Guru — Jurnal 7 KAIH</h3>'+
             '<p class="text-sm text-slate-500 mt-1">Gunakan Kode Guru (Wali Kelas) yang sama dengan Administrasi Pembelajaran.</p></div>'+
-            '<label class="block text-xs font-bold text-slate-600 mb-2">Kode Guru (Wali Kelas)</label>'+            '<input id="kaihTeacherCodeInput" type="text" autocomplete="off" class="w-full px-4 py-3 rounded-xl border border-slate-300 font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: GR-001">'+
+            '<label class="block text-xs font-bold text-slate-600 mb-2">Kode Guru (Wali Kelas)</label>'+            '<input id="kaihTeacherCodeInput" type="password" autocomplete="off" class="w-full px-4 py-3 rounded-xl border border-slate-300 font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: GR-001">'+
             '<div id="kaihTeacherLoginError" class="hidden mt-3 text-sm font-semibold text-rose-600"></div>'+            '<div class="grid grid-cols-2 gap-3 mt-6"><button type="button" id="kaihTeacherCancel" class="py-3 rounded-xl border border-slate-300 font-bold text-slate-600">Batal</button>'+            '<button type="button" id="kaihTeacherSubmit" class="py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Masuk ke Jurnal</button></div></div>';
           document.body.appendChild(modal);
           if(window.lucide) window.lucide.createIcons();
@@ -833,24 +756,11 @@
           if(title) title.textContent=mode==='siswa'?'Pilih Kelas dan Nama Murid':'Pilih Kelas dan Nama Murid untuk menyetujui laporan';
           if(btn) btn.textContent=mode==='siswa'?'Buat Laporan':'Cek & Setujui Laporan';
           populateClasses();
-          if(clsInput) clsInput.oninput=null;
-          if(stuInput) stuInput.oninput=null;
-          var kaihPickerSearch=document.getElementById('kaihPickerSearch');
-          if(kaihPickerSearch) kaihPickerSearch.oninput=function(){ renderKaihPicker(this.value); };
-          if(kaihPickerSearch) kaihPickerSearch.onkeydown=function(e){ if(e.key==='Escape') closeKaihPicker(); };
+          if(cls) cls.onchange=function(){ if(stu) stu.value=''; populateStudents(); };
           if(btn) btn.onclick=function(){
-            var selected=txt((clsInput&&clsInput.value)||(cls&&cls.value)), student=txt((stuInput&&stuInput.value)||(stu&&stu.value)), cat=classList(), match=null, i;
+            var selected=txt(cls&&cls.value), student=txt(stu&&stu.value), cat=classList(), match=null, i;
             if(!selected){alert('Silakan pilih kelas terlebih dahulu.');return;}
             if(!student){alert('Silakan pilih nama murid terlebih dahulu.');return;}
-            var validClass=false, validStudent=false;
-            for(i=0;i<cat.classes.length;i++){
-              if(key(className(cat.classes[i]))===key(selected)){ validClass=true; break; }
-            }
-            for(i=0;i<cat.students.length;i++){
-              if(key(studentName(cat.students[i]))===key(student) && (!studentClass(cat.students[i]) || key(studentClass(cat.students[i]))===key(selected))){ validStudent=true; break; }
-            }
-            if(!validClass){alert('Kelas belum dipilih dari daftar. Silakan ketik lalu pilih nama kelas yang muncul.');return;}
-            if(!validStudent){alert('Nama murid belum dipilih dari daftar untuk kelas tersebut. Silakan ketik beberapa huruf lalu pilih nama yang sesuai.');return;}
             for(i=0;i<cat.classes.length;i++){if(key(className(cat.classes[i]))===key(selected)){match=cat.classes[i];break;}}
             window.__JURNAL_SELECTED_CLASS=selected;
             window.__JURNAL_SELECTED_STUDENT=student;
@@ -894,31 +804,8 @@
             }
             launch(html);
           };
-          // Jangan melakukan refresh selector dengan setInterval. Pada Android/HP,
-          // refresh setiap 1 detik membuat input/datalist dibangun ulang sehingga
-          // daftar kelas/nama murid muncul sebentar lalu hilang kembali.
-          // Selector sekarang hanya diisi saat halaman dibuka dan saat data benar-benar berubah.
-          if(window.__JURNAL_SELECTOR_REFRESH_TIMER){
-            clearInterval(window.__JURNAL_SELECTOR_REFRESH_TIMER);
-            window.__JURNAL_SELECTOR_REFRESH_TIMER=null;
-          }
-          window.__JURNAL_SELECTOR_LAST_CLASS_COUNT=classList().classes.length;
-          window.__JURNAL_SELECTOR_LAST_STUDENT_COUNT=classList().students.length;
-          window.__JURNAL_SELECTOR_REFRESH=function(){
-            var c=classList();
-            var classCount=c.classes.length, studentCount=c.students.length;
-            if(classCount!==window.__JURNAL_SELECTOR_LAST_CLASS_COUNT || studentCount!==window.__JURNAL_SELECTOR_LAST_STUDENT_COUNT){
-              var currentClass=txt((clsInput&&clsInput.value)||(cls&&cls.value));
-              var currentStudent=txt((stuInput&&stuInput.value)||(stu&&stu.value));
-              window.__JURNAL_SELECTOR_LAST_CLASS_COUNT=classCount;
-              window.__JURNAL_SELECTOR_LAST_STUDENT_COUNT=studentCount;
-              populateClasses();
-              if(currentClass && clsInput) clsInput.value=currentClass;
-              if(currentClass) populateStudents();
-              if(currentStudent && stuInput) stuInput.value=currentStudent;
-              if(currentStudent && stu) stu.value=currentStudent;
-            }
-          };
+          if(window.__JURNAL_SELECTOR_REFRESH_TIMER) clearInterval(window.__JURNAL_SELECTOR_REFRESH_TIMER);
+          window.__JURNAL_SELECTOR_REFRESH_TIMER=setInterval(populateClasses,1000);
         }else{
           if(bar) bar.style.display='none';
           var html=window.__JURNAL_KAIH_HTML||'';
@@ -1269,7 +1156,7 @@ window.esc = esc;
 window.__loginFallbackDisabled = true;
 </script>
 <!-- Notification Toast Container -->
-<div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none" id="toastContainer"></div>
+<div class="fixed top-5 right-5 z-[300] flex flex-col gap-2 pointer-events-none" id="toastContainer"></div>
 <!-- APP CONTAINER -->
 <div class="flex-1 flex flex-col min-h-screen" id="app">
 <!-- LOGIN VIEW -->
@@ -1319,7 +1206,7 @@ window.__loginFallbackDisabled = true;
 <i class="w-5 h-5" data-lucide="mail"></i>
 </span>
 <input class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition" id="loginEmail" placeholder="admin@sekolah.sch.id" required="" type="text" value="admin@sekolah.sch.id"/>
-<input class="hidden w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition font-mono uppercase" disabled="" id="loginTeacherCode" placeholder="Masukkan Kode (Misal: GR-001)" type="text"/>
+<input class="hidden w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition font-mono uppercase" disabled="" id="loginTeacherCode" placeholder="Masukkan Kode (Misal: GR-001)" type="password"/>
 </div>
 </div>
 <!-- Pilihan Kelas Khusus Wali Kelas/Guru -->
@@ -3821,17 +3708,9 @@ if (globalSem && !globalSem.dataset.initialized) {
           } catch (e) {}
         };
 
-        // Sinkronkan sekali saat portal dibuka. JANGAN menggunakan setInterval
-        // di sini: pada Android, pembaruan state berulang dapat membuat komponen
-        // <select> dibangun ulang saat jari pengguna sedang membuka daftar,
-        // sehingga pilihan terlihat muncul-hilang-muncul.
         syncPortalCatalog();
-
-        // Jika halaman induk mengirim sinyal perubahan katalog, sinkronkan sekali.
-        // Tidak ada polling sehingga kontrol kelas/nama murid tetap stabil.
-        const handleKaihCatalogUpdate = () => syncPortalCatalog();
-        window.addEventListener('kaih-catalog-updated', handleKaihCatalogUpdate);
-        return () => window.removeEventListener('kaih-catalog-updated', handleKaihCatalogUpdate);
+        const timer = setInterval(syncPortalCatalog, 500);
+        return () => clearInterval(timer);
       }, []);
 
       useEffect(() => {
@@ -3872,11 +3751,8 @@ if (globalSem && !globalSem.dataset.initialized) {
         localStorage.setItem('last_class_id', classId);
 
         if (isOffline) {
-          // Mode offline cukup memuat data sekali. Polling berkala dapat
-          // membangun ulang state saat pengguna sedang memilih di Android.
           const load = () => setData(LocalDB.get(classId));
-          load();
-          return undefined;
+          load(); const int = setInterval(load, 2000); return () => clearInterval(int);
         }
 
         if (!firebaseReady) return;
@@ -9196,24 +9072,9 @@ const data = {
 
             const result = [];
             const add = v => {
-                const rawValue = String(v || '').trim();
-                if (!rawValue) return;
-
-                const c = canonicalAssessmentSubject(rawValue);
+                const c = canonicalAssessmentSubject(v);
                 const key = normalizeAssessmentSubject(c);
-
-                // Simpan mapel yang dikenali oleh master subject.
-                if (ASSESSMENT_MASTER_SUBJECTS.some(s => normalizeAssessmentSubject(s) === key)) {
-                    if (!result.some(x => normalizeAssessmentSubject(x) === key)) result.push(c);
-                    return;
-                }
-
-                // Data guru lama/custom subject tetap dipertahankan. Ini penting
-                // agar Kode Guru Mapel tidak dianggap invalid hanya karena nama
-                // mapelnya belum ada di daftar master.
-                if (!result.some(x => normalizeAssessmentSubject(x) === normalizeAssessmentSubject(rawValue))) {
-                    result.push(rawValue);
-                }
+                if (ASSESSMENT_MASTER_SUBJECTS.some(s => normalizeAssessmentSubject(s) === key) && !result.some(x => normalizeAssessmentSubject(x) === key)) result.push(c);
             };
             raw.forEach(add);
 
@@ -11741,13 +11602,11 @@ if (!isPasswordHidden) {
                     return;
                 }
 
-                // Guru Mapel harus dapat LOGIN hanya berdasarkan Kode Guru yang
-                // terdaftar. Data Mata Pelajaran dipakai untuk membatasi fitur
-                // Penilaian setelah login, bukan untuk menggagalkan autentikasi.
-                // Versi lama memblokir login jika nama mapel belum cocok persis
-                // dengan ASSESSMENT_MASTER_SUBJECTS.
                 const loginSubjects = getLoggedInTeacherSubjects(teacher);
-                window.AppState.subjectTeacherSubjects = loginSubjects;
+                if (loginSubjects.length === 0) {
+                    showToast('Akses Guru Mapel belum lengkap. Administrator harus mengisi Mata Pelajaran yang Diampu pada Data Guru.', 'error');
+                    return;
+                }
 
                 window.AppState.assignedClass = '';
                 window.AppState.currentTeacherName = teacher.name || '';
@@ -12286,6 +12145,10 @@ window.openSupervisiAdministrasiPembelajaranForm=function(recordId=''){
                 <p class="text-[11px] text-slate-500">Kepala Sekolah dapat memilih instrumen berbeda untuk Wali Kelas/Guru Kelas dan Guru Mapel.</p></div>
                 <button onclick="window.closeModal()" class="p-2 rounded-lg hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
+            <div id="sap_validation_alert" class="hidden mx-5 mt-3 bg-rose-50 border-2 border-rose-300 text-rose-800 rounded-xl px-4 py-3 shadow-sm flex items-start gap-3" role="alert" aria-live="assertive">
+                <i data-lucide="alert-triangle" class="w-5 h-5 mt-0.5 shrink-0 text-rose-600"></i>
+                <div><div class="font-extrabold text-sm">Peringatan Supervisi</div><div id="sap_validation_message" class="text-xs mt-1 leading-relaxed"></div></div>
+            </div>
             <div class="p-5 max-h-[82vh] overflow-y-auto custom-scrollbar">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
                     <div><label class="block text-xs font-semibold mb-1">Nama Sekolah</label><input id="sap_school" value="${escSAP(window.AppState.schoolInfo.name)}" readonly class="w-full px-3 py-2 border rounded-lg bg-slate-50 text-sm"></div>
@@ -12315,7 +12178,19 @@ window.openSupervisiAdministrasiPembelajaranForm=function(recordId=''){
                 <div class="flex justify-end gap-2 mt-5 pt-4 border-t"><button onclick="window.closeModal()" class="px-4 py-2 rounded-lg border text-xs">Batal</button><button onclick="window.saveSupervisiAdministrasiPembelajaran('${escSAP(recordId)}')" class="px-4 py-2 rounded-lg bg-amber-600 text-white text-xs font-bold"><i data-lucide="save" class="w-4 h-4 inline"></i> Simpan</button></div>
             </div>`;
             openModal();lucide.createIcons();
+            const showSAPValidation=(message)=>{
+                const alertBox=document.getElementById('sap_validation_alert');
+                const messageBox=document.getElementById('sap_validation_message');
+                if(messageBox) messageBox.textContent=String(message||'Periksa kembali isian supervisi.');
+                if(alertBox){ alertBox.classList.remove('hidden'); alertBox.scrollIntoView({behavior:'smooth',block:'start'}); }
+            };
+            const clearSAPValidation=()=>{
+                const alertBox=document.getElementById('sap_validation_alert');
+                if(alertBox) alertBox.classList.add('hidden');
+            };
+            window.__clearSAPValidation=clearSAPValidation;
             document.getElementById('sap_instrument_type')?.addEventListener('change',e=>{
+                clearSAPValidation();
                 const type=e.target.value;
                 const teacherSelect=document.getElementById('sap_teacher');
                 if(teacherSelect){
@@ -12334,14 +12209,29 @@ window.openSupervisiAdministrasiPembelajaranForm=function(recordId=''){
             const instrumentType=document.getElementById('sap_instrument_type')?.value||'wali_kelas';
             const flat=getSAPInstrumentFlat(instrumentType), maxScore=getSAPInstrumentMax(instrumentType);
             const teacherName=document.getElementById('sap_teacher')?.value?.trim();
-            if(!teacherName)return showToast('Silakan pilih Nama Guru.','error');
+            if(!teacherName){
+                if(window.__clearSAPValidation) window.__clearSAPValidation();
+                const alertBox=document.getElementById('sap_validation_alert');
+                const messageBox=document.getElementById('sap_validation_message');
+                if(messageBox) messageBox.textContent='Silakan pilih Nama Guru terlebih dahulu sebelum menyimpan supervisi.';
+                if(alertBox){ alertBox.classList.remove('hidden'); alertBox.scrollIntoView({behavior:'smooth',block:'start'}); }
+                document.getElementById('sap_teacher')?.focus();
+                return;
+            }
             const scores={},notes={};let answered=0,totalScore=0;
             for(let i=1;i<=flat.length;i++){
                 const c=document.querySelector(`input[name="sap_item_${i}"]:checked`);
                 if(c){scores[i]=Number(c.value);answered++;totalScore+=Number(c.value);}
                 notes[i]=document.getElementById(`sap_note_${i}`)?.value?.trim()||'';
             }
-            if(answered<flat.length)return showToast(`Masih ada ${flat.length-answered} indikator yang belum diberi skor.`,'error');
+            if(answered<flat.length){
+                const msg=`Masih ada ${flat.length-answered} indikator yang belum diberi skor. Lengkapi seluruh penilaian pada tabel sebelum menyimpan.`;
+                const alertBox=document.getElementById('sap_validation_alert');
+                const messageBox=document.getElementById('sap_validation_message');
+                if(messageBox) messageBox.textContent=msg;
+                if(alertBox){ alertBox.classList.remove('hidden'); alertBox.scrollIntoView({behavior:'smooth',block:'start'}); }
+                return;
+            }
             const percentage=maxScore?totalScore/maxScore*100:0;
             const data={
                 schoolName:window.AppState.schoolInfo.name||'', teacherName,
@@ -12366,7 +12256,14 @@ window.openSupervisiAdministrasiPembelajaranForm=function(recordId=''){
                 else await addDoc(getPublicColl('supervisiAdministrasiPembelajaran'),data);
                 closeModal();showToast(`Supervisi Administrasi Pembelajaran ${getSAPInstrumentLabel(instrumentType)} berhasil disimpan.`,'success');
                 setTimeout(()=>{if(window.AppState.currentView==='supervisi-administrasi-pembelajaran')renderCurrentView();},150);
-            }catch(err){console.error(err);showToast('Gagal menyimpan: '+err.message,'error');}finally{hideLoading();}
+            }catch(err){
+                console.error(err);
+                const msg='Gagal menyimpan supervisi: '+(err?.message||'Terjadi kesalahan.');
+                const alertBox=document.getElementById('sap_validation_alert');
+                const messageBox=document.getElementById('sap_validation_message');
+                if(messageBox) messageBox.textContent=msg;
+                if(alertBox){ alertBox.classList.remove('hidden'); alertBox.scrollIntoView({behavior:'smooth',block:'start'}); }
+            }finally{hideLoading();}
         };
         window.deleteSupervisiAdministrasiPembelajaran=function(id){const r=(window.AppState.supervisiAdministrasiPembelajaran||[]).find(x=>x.id===id);if(!r)return;showConfirmModal('Hapus Supervisi Administrasi Pembelajaran?',`Data supervisi ${r.teacherName||''} pada ${window.formatHariTanggal(r.date)} akan dihapus.`,async()=>{try{await deleteDoc(getPublicDoc('supervisiAdministrasiPembelajaran',id));showToast('Data supervisi berhasil dihapus.','success');}catch(err){showToast('Gagal menghapus data: '+err.message,'error');}});};
         // ===== EKSPOR EXCEL SUPERVISI AKADEMIK =====
